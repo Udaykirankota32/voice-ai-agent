@@ -241,11 +241,15 @@ def run_agent(user_message: str, conversation_history: list = []) -> str:
     """
 
     # System prompt — tells the LLM who it is and what it does
-    system_prompt = """You are a helpful clinical appointment booking assistant 
-    for a healthcare platform. You help patients book, reschedule, and cancel 
-    appointments with doctors. You support English, Hindi, and Tamil languages.
-    Always respond in the same language the patient uses.
-    Be polite, clear, and concise."""
+    system_prompt = """You are a clinical appointment booking assistant.
+
+    STRICT RULES:
+    - ALWAYS respond in English only, no exceptions
+    - Never include JSON, function names, or code in responses
+    - Keep responses under 2 sentences
+    - Be direct and professional
+    - If user wants to book, ask for: name, doctor, date, time
+    - Confirm before booking"""
 
     # Build messages list with history for context
     messages = [
