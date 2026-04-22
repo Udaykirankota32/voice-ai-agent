@@ -1,0 +1,5 @@
+.env
+Test-1.m4a
+venv/
+__pycache__/
+*.pyc
