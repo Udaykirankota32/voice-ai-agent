@@ -1,9 +1,16 @@
 import os
+import sys
 import time
+from pathlib import Path
+
+if __package__ is None or __package__ == "":
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from dotenv import load_dotenv
 from deepgram import DeepgramClient, PrerecordedOptions
 from elevenlabs.client import ElevenLabs
 from app.agent import run_agent
+from app.memory import session_memory
 
 load_dotenv()
 
@@ -88,22 +95,26 @@ def run_pipeline(audio_file: str, language: str = "en"):
         print("[ERROR] Could not understand audio")
         return
 
-    # Step 2 — Agent thinks and responds
-    agent_response = run_agent(transcript)
+    # Step 2 — Update session memory with user message
+    session_memory.add_user_message(transcript)
 
-    # Step 3 — Guard against empty response
+    # Step 3 — Agent thinks using full conversation history
+    agent_response = run_agent(transcript, session_memory.get_history())
+
+    # Step 4 — Guard against empty response
     if not agent_response or agent_response == "None":
         agent_response = "I understood your request. Could you please provide more details so I can help you book an appointment?"
 
-    # Step 4 — Text to speech
+    # Step 5 — Save agent response to memory
+    session_memory.add_agent_message(agent_response)
+
+    print(f"\n[MEMORY] Session has {len(session_memory.get_history())} messages so far")
+
+    # Step 6 — Text to speech
     speak_response(agent_response)
 
     total_elapsed = (time.time() - total_start) * 1000
     print(f"\n[LATENCY] Total pipeline: {total_elapsed:.0f}ms")
-    print(f"[LATENCY] Breakdown:")
-    print(f"  STT:   ~{total_elapsed * 0.4:.0f}ms")
-    print(f"  Agent: ~{total_elapsed * 0.45:.0f}ms")
-    print(f"  TTS:   ~{total_elapsed * 0.15:.0f}ms")
     print("="*50)
 
 
@@ -111,4 +122,12 @@ def run_pipeline(audio_file: str, language: str = "en"):
 # TEST THE FULL PIPELINE
 # ─────────────────────────────────────────
 if __name__ == "__main__":
+    # Clear memory before fresh test
+    session_memory.clear()
+
+    # Simulate a multi-turn conversation
+    print("Turn 1 — First message")
+    run_pipeline("Test-1.m4a", language="en")
+
+    print("\nTurn 2 — Follow up (agent should remember context)")
     run_pipeline("Test-1.m4a", language="en")
